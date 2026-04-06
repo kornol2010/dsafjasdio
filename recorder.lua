@@ -420,7 +420,7 @@ return function(ctx)
             return
         end
         local cmd = string.format("TDS:Equip(%s)", string.format("%q", tower_name))
-        record_line(cmd, "Założono: " .. tower_name)
+        record_line(cmd, "Equipped: " .. tower_name)
     end
 
     Globals.__tds_record_unequip = function(tower_name)
@@ -428,7 +428,7 @@ return function(ctx)
             return
         end
         local cmd = string.format("TDS:Unequip(%s)", string.format("%q", tower_name))
-        record_line(cmd, "Zdjęto: " .. tower_name)
+        record_line(cmd, "Unequipped: " .. tower_name)
     end
 
     local function handle_namecall(remote, method, args, results)
@@ -477,7 +477,7 @@ return function(ctx)
                         )
                     end
 
-                    record_line(cmd, "Umiejętność: " .. name .. " (Indeks: " .. idx .. ")")
+                    record_line(cmd, "Ability: " .. name .. " (Index: " .. idx .. ")")
                     handled = true
                     return
                 end
@@ -490,7 +490,7 @@ return function(ctx)
                 local target_type = a4.Target
                 if idx and type(target_type) == "string" then
                     local cmd = string.format("TDS:SetTarget(%d, %s)", idx, string.format("%q", target_type))
-                    record_line(cmd, "Cel: " .. idx .. " -> " .. target_type)
+                    record_line(cmd, "Target: " .. idx .. " -> " .. target_type)
                     handled = true
                     return
                 end
@@ -509,7 +509,7 @@ return function(ctx)
                         string.format("%q", opt_name),
                         serialize_value(opt_val)
                     )
-                    record_line(cmd, "Opcja: " .. idx .. " " .. opt_name .. " = " .. tostring(opt_val))
+                    record_line(cmd, "Option: " .. idx .. " " .. opt_name .. " = " .. tostring(opt_val))
                     handled = true
                     return
                 end
@@ -531,9 +531,9 @@ return function(ctx)
             local current_wave = 0
             current_wave = replicated_storage.StateReplicators.GameStateReplicator:GetAttribute("Wave") or 0
             if current_wave == 0 then
-                record_line("TDS:Ready()", "Gotowość do meczu")
+                record_line("TDS:Ready()", "Readied up for the match")
             else
-                record_line("TDS:VoteSkip()", "Głos na pominięcie fali")
+                record_line("TDS:VoteSkip()", "Voted to skip wave")
             end
             handled = true
             return
@@ -543,7 +543,7 @@ return function(ctx)
             if type(args[4]) == "string" then
                 local tower_name = args[4]
                 local cmd = string.format("TDS:Equip(%s)", string.format("%q", tower_name))
-                record_line(cmd, "Założono: " .. tower_name)
+                record_line(cmd, "Equipped: " .. tower_name)
             end
             handled = true
             return
@@ -553,7 +553,7 @@ return function(ctx)
             if type(args[4]) == "string" then
                 local tower_name = args[4]
                 local cmd = string.format("TDS:Unequip(%s)", string.format("%q", tower_name))
-                record_line(cmd, "Zdjęto: " .. tower_name)
+                record_line(cmd, "Unequipped: " .. tower_name)
             end
             handled = true
             return
@@ -562,7 +562,7 @@ return function(ctx)
         if is_consumable_call(remote, args) then
             local raw_call = build_remote_call(remote, method, args)
             if raw_call then
-                record_line(raw_call, "Użyto przedmiotu")
+                record_line(raw_call, "Consumable used")
             end
             handled = true
             return
@@ -609,7 +609,7 @@ return function(ctx)
                     string.format("%q", opt_name),
                     serialize_value(opt_val)
                 )
-                record_line(cmd, "Opcja: " .. idx .. " " .. opt_name .. " = " .. tostring(opt_val))
+                record_line(cmd, "Option: " .. idx .. " " .. opt_name .. " = " .. tostring(opt_val))
             end
             return
         end
@@ -618,7 +618,7 @@ return function(ctx)
             local target_type = payload and payload.Target or (#strings >= 1 and strings[1] or nil)
             if target_type then
                 local cmd = string.format("TDS:SetTarget(%d, %s)", idx, string.format("%q", target_type))
-                record_line(cmd, "Cel: " .. idx .. " -> " .. tostring(target_type))
+                record_line(cmd, "Target: " .. idx .. " -> " .. tostring(target_type))
             end
             return
         end
@@ -638,15 +638,15 @@ return function(ctx)
                         serialize_value(data)
                     )
                 end
-                record_line(cmd, "Umiejętność: " .. name .. " (Indeks: " .. idx .. ")")
+                record_line(cmd, "Ability: " .. name .. " (Index: " .. idx .. ")")
             end
             return
         end
     end
 
-    local RecorderTab = Window:Tab({Title = "Nagrywanie", Icon = "camera"}) do
+    local RecorderTab = Window:Tab({Title = "Recorder", Icon = "camera"}) do
         Recorder = RecorderTab:CreateLogger({
-            Title = "NAGRYWANIE:",
+            Title = "RECORDER:",
             Size = UDim2.new(0, 330, 0, 230)
         })
 
@@ -680,10 +680,10 @@ return function(ctx)
             Desc = "",
             Callback = function()
                 Recorder:Clear()
-                Recorder:Log("Nagrywanie rozpoczęte")
+                Recorder:Log("Recorder started")
 
-                local current_mode = "Nieznany"
-                local current_map = "Nieznana"
+                local current_mode = "Unknown"
+                local current_map = "Unknown"
                 local skip_game_info = false
                 
                 local state_folder = replicated_storage:FindFirstChild("State")
@@ -749,18 +749,18 @@ return function(ctx)
                     end
                 end
 
-                Recorder:Log("Tryb: " .. current_mode)
-                Recorder:Log("Mapa: " .. current_map)
-                Recorder:Log("Wieże: " .. tower1 .. ", " .. tower2)
+                Recorder:Log("Mode: " .. current_mode)
+                Recorder:Log("Map: " .. current_map)
+                Recorder:Log("Towers: " .. tower1 .. ", " .. tower2)
                 Recorder:Log(tower3 .. ", " .. tower4 .. ", " .. tower5)
 
                 sync_existing_towers()
                 last_wave = 0
                 Globals.record_strat = true
                 if has_hook then
-                    Recorder:Log("Rozszerzone nagrywanie włączone")
+                    Recorder:Log("Extended recording enabled")
                 else
-                    Recorder:Log("Ograniczone nagrywanie (postaw/ulepsz/sprzedaj)")
+                    Recorder:Log("Limited recording (place/upgrade/sell)")
                 end
 
                 if writefile then
@@ -780,8 +780,8 @@ TDS:Mode("%s")%s
                 end
 
                 Window:Notify({
-                    Title = "Informacja",
-                    Desc = "Nagrywanie rozpoczęte — możesz teraz stawiać wieże.",
+                    Title = "Info",
+                    Desc = "Recorder has started, you may place down your towers now.",
                     Time = 3,
                     Type = "normal"
                 })
@@ -794,10 +794,10 @@ TDS:Mode("%s")%s
             Callback = function()
                 Globals.record_strat = false
                 Recorder:Clear()
-                Recorder:Log("Strategia zapisana — znajdziesz ją w folderze roboczym jako 'Strat.txt'")
+                Recorder:Log("Strategy saved, you may find it in \nyour workspace folder called 'Strat.txt'")
                 Window:Notify({
-                    Title = "Informacja",
-                    Desc = "Nagranie zapisane — sprawdź w folderze roboczym plik Strat.txt",
+                    Title = "Info",
+                    Desc = "Recording has been saved! Check your workspace folder for Strat.txt",
                     Time = 3,
                     Type = "normal"
                 })
@@ -842,12 +842,12 @@ TDS:Mode("%s")%s
                     command = 'TDS:Place("' .. tower_name .. '", ' .. tostring(pos_x) .. ', ' .. tostring(pos_y) .. ', ' .. tostring(pos_z) .. ')'
                 end
                 record_action(command)
-                Recorder:Log("Postawiono " .. tower_name .. " (Indeks: " .. my_index .. ")")
+                Recorder:Log("Placed " .. tower_name .. " (Index: " .. my_index .. ")")
 
                 replicator:GetAttributeChangedSignal("Upgrade"):Connect(function()
                     if not Globals.record_strat then return end
                     record_action(string.format('TDS:Upgrade(%d)', my_index))
-                    Recorder:Log("Ulepszono wieżę " .. my_index)
+                    Recorder:Log("Upgraded Tower " .. my_index)
                 end)
             end)
 
@@ -857,7 +857,7 @@ TDS:Mode("%s")%s
                 local my_index = spawned_towers[tower]
                 if my_index then
                     record_action(string.format('TDS:Sell(%d)', my_index))
-                    Recorder:Log("Sprzedano wieżę " .. my_index)
+                    Recorder:Log("Sold Tower " .. my_index)
                     
                     spawned_towers[tower] = nil
                 end

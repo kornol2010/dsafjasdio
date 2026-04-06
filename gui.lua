@@ -1072,7 +1072,7 @@ do
 		TextBox_1.Size = UDim2.new(1, 0,1, 0)
 		TextBox_1.Font = Enum.Font.Gotham
 		TextBox_1.PlaceholderColor3 = Color3.fromRGB(178,178,178)
-		TextBox_1.PlaceholderText = "Szukaj..."
+		TextBox_1.PlaceholderText = "Search..."
 		TextBox_1.Text = ""
 		TextBox_1.TextColor3 = Color3.fromRGB(255,255,255)
 		TextBox_1.TextSize = 11
@@ -5143,6 +5143,7 @@ function Library:Window(p)
 		local isMinimized = false
 		local fullSize = Shadow_1.Size
 		local minimizedSize = UDim2.new(0, Shadow_1.Size.X.Offset, 0, 43)
+		local isopen = false
 
 		Minisize_1.MouseButton1Click:Connect(function()
 			if not isMinimized then
@@ -5184,9 +5185,6 @@ function Library:Window(p)
 		end)
 
 		ChSize_1.MouseButton1Click:Connect(function()
-			if not CloseUIShadowRef then
-				CloseUIShadowRef = ScreenGui:FindFirstChild("CloseUIShadow")
-			end
 			savedCloseSize = Background_1.Size
 			if not savedCloseSize then
 				savedCloseSize = Background_1.Size
@@ -5204,13 +5202,7 @@ function Library:Window(p)
 			close:Play()
 			close.Completed:Wait()
 			Shadow_1.Visible = false
-			task.wait(0.1)
-			if CloseUIShadowRef then
-				CloseUIShadowRef.Visible = true
-				tw({v = CloseUIShadowRef, t = 0.2, s = Enum.EasingStyle.Linear, d = "Out", g = {
-					ImageTransparency = 0.5
-				}}):Play()
-			end
+			isopen = true
 		end)
 
 		if not HAA then
@@ -5255,11 +5247,9 @@ function Library:Window(p)
 		end)
 
 		lak(Topbar_1, Shadow_1)
-
-		local isopen = false
 		local firsttime = false
 		local oSize
-		local function closeui(hideDraggable)
+		local function closeui()
 			isopen = not isopen
 			if isopen then
 				oSize = Background_1.Size
@@ -5276,18 +5266,8 @@ function Library:Window(p)
 				close:Play()
 				close.Completed:Wait()
 				Shadow_1.Visible = false
-				local closeUIButton = ScreenGui:FindFirstChild("CloseUIShadow")
-				if closeUIButton then
-					if hideDraggable == false then
-						closeUIButton.Visible = true
-						tw({v = closeUIButton, t = 0.2, s = Enum.EasingStyle.Linear, d = "Out", g = {
-							ImageTransparency = 0.5
-						}}):Play()
-					else
-						closeUIButton.Visible = false
-					end
-				end
 			else
+				oSize = oSize or savedCloseSize or Background_1.Size
 				Shadow_1.Visible = true  
 				local open = tw({
 					v = Background_1,
@@ -5300,19 +5280,6 @@ function Library:Window(p)
 					}
 				})
 				open:Play()
-				local closeUIButton = ScreenGui:FindFirstChild("CloseUIShadow")
-				if closeUIButton then
-					closeUIButton.Visible = false
-				end
-			end
-
-			if not firsttime then
-				firsttime = true
-				Tabs:Notify({
-					Title = 'ADS',
-					Desc = 'Press the <font color="#FF77A5" size="14">('..tostring(Keybind):gsub("Enum.KeyCode.", "")..')</font> button to hide and show the UI',
-					Time = 10
-				})
 			end
 		end
 
@@ -5328,7 +5295,7 @@ function Library:Window(p)
 				if Tabs and Tabs.UIToggleKeybind and i.KeyCode == Tabs.UIToggleKeybind then
 					local focusedTextBox = U:GetFocusedTextBox()
 					if not focusedTextBox then
-						closeui(false)
+						closeui()
 					end
 				end
 			end)
@@ -5336,20 +5303,9 @@ function Library:Window(p)
 		
 		setupKeybindListener()
 		
-		local lastKeybindNotificationTime = 0
 		function Tabs:SetUIToggleKeybind(newKeybind)
 			Tabs.UIToggleKeybind = newKeybind
 			setupKeybindListener()
-			local currentTime = tick()
-			if not firsttime and (currentTime - lastKeybindNotificationTime) > 5 then
-				firsttime = true
-				lastKeybindNotificationTime = currentTime
-				Tabs:Notify({
-					Title = 'ADS',
-					Desc = 'Press the <font color="#FF77A5" size="14">('..tostring(newKeybind):gsub("Enum.KeyCode.", "")..')</font> button to hide and show the UI',
-					Time = 10
-				})
-			end
 		end
 		
 		function Tabs:GetUIToggleKeybind()
@@ -5359,6 +5315,7 @@ function Library:Window(p)
 		local CallTheme = function(v)
 			IsTheme = v
 			local t = themes[v]
+			Tabs.CurrentTheme = v
 			Library:setTheme({
 				['Shadow'] = t.Shadow,
 				['Background'] = t.Background,
@@ -5473,6 +5430,150 @@ function Library:Window(p)
 			
 			Shadow_1.Visible = true
 		end
+		
+		function Tabs:SetTheme(themeName)
+			if themes[themeName] then
+				CallTheme(themeName)
+			end
+		end
+		
+		function Tabs:GetTheme()
+			return Tabs.CurrentTheme or Theme
+		end
+		
+		function Tabs:GetThemeList()
+			return themes.index
+		end
+
+		function Tabs:CreateStatusOverlay(p)
+			p = p or {}
+			local overlay = {}
+			local titleText = p.Title or "Enabled"
+			local startPos = p.Position or UDim2.new(0, 20, 0, 120)
+			local width = p.Width or 220
+			local maxRows = p.MaxRows or 10
+			
+			local Shadow = Instance.new("ImageLabel")
+			Shadow.Name = "StatusOverlayShadow"
+			Shadow.Parent = ScreenGui
+			Shadow.BackgroundTransparency = 1
+			Shadow.Position = startPos
+			Shadow.Size = UDim2.new(0, width, 0, 34 + (maxRows * 18))
+			Shadow.Image = "rbxassetid://1316045217"
+			Shadow.ImageTransparency = 0.5
+			Shadow.ScaleType = Enum.ScaleType.Slice
+			Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+			addToTheme("Shadow", Shadow)
+
+			local Padding = Instance.new("UIPadding")
+			Padding.Parent = Shadow
+			Padding.PaddingTop = UDim.new(0, 6)
+			Padding.PaddingBottom = UDim.new(0, 6)
+			Padding.PaddingLeft = UDim.new(0, 6)
+			Padding.PaddingRight = UDim.new(0, 6)
+
+			local Bg = Instance.new("Frame")
+			Bg.Name = "Background"
+			Bg.Parent = Shadow
+			Bg.BorderSizePixel = 0
+			Bg.Size = UDim2.new(1, 0, 1, 0)
+			addToTheme("Background", Bg)
+			
+			local Corner = Instance.new("UICorner")
+			Corner.Parent = Bg
+			Corner.CornerRadius = UDim.new(0, 6)
+			
+			local Header = Instance.new("TextButton")
+			Header.Name = "Header"
+			Header.Parent = Bg
+			Header.BorderSizePixel = 0
+			Header.Size = UDim2.new(1, 0, 0, 22)
+			Header.AutoButtonColor = false
+			Header.Text = ""
+			addToTheme("Main", Header)
+			
+			local HeaderCorner = Instance.new("UICorner")
+			HeaderCorner.Parent = Header
+			HeaderCorner.CornerRadius = UDim.new(0, 6)
+			
+			local HeaderTitle = Instance.new("TextLabel")
+			HeaderTitle.Parent = Header
+			HeaderTitle.BackgroundTransparency = 1
+			HeaderTitle.Size = UDim2.new(1, -10, 1, 0)
+			HeaderTitle.Position = UDim2.new(0, 10, 0, 0)
+			HeaderTitle.Font = Enum.Font.GothamBold
+			HeaderTitle.TextSize = 12
+			HeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
+			HeaderTitle.Text = titleText
+			addToTheme("Text & Icon", HeaderTitle)
+			
+			local List = Instance.new("Frame")
+			List.Name = "List"
+			List.Parent = Bg
+			List.BackgroundTransparency = 1
+			List.Position = UDim2.new(0, 0, 0, 26)
+			List.Size = UDim2.new(1, 0, 1, -26)
+			
+			local Layout = Instance.new("UIListLayout")
+			Layout.Parent = List
+			Layout.FillDirection = Enum.FillDirection.Vertical
+			Layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+			Layout.SortOrder = Enum.SortOrder.LayoutOrder
+			Layout.Padding = UDim.new(0, 2)
+			
+			local items = {}
+			
+			local function ensureRow(label)
+				if items[label] then
+					return items[label]
+				end
+				local row = Instance.new("TextLabel")
+				row.Name = "Item"
+				row.Parent = List
+				row.BackgroundTransparency = 1
+				row.Size = UDim2.new(1, -10, 0, 16)
+				row.Position = UDim2.new(0, 10, 0, 0)
+				row.Font = Enum.Font.Gotham
+				row.TextSize = 12
+				row.TextXAlignment = Enum.TextXAlignment.Left
+				row.Text = "• " .. tostring(label)
+				addToTheme("Text & Icon", row)
+				items[label] = row
+				return row
+			end
+			
+			function overlay:SetState(label, enabled)
+				label = tostring(label)
+				local row = items[label]
+				if enabled then
+					row = ensureRow(label)
+					row.Visible = true
+				else
+					if row then
+						row.Visible = false
+					end
+				end
+			end
+			
+			function overlay:SetStates(map)
+				for label, enabled in pairs(map or {}) do
+					overlay:SetState(label, enabled)
+				end
+			end
+			
+			function overlay:SetVisible(v)
+				Shadow.Visible = v and true or false
+			end
+			
+			function overlay:Destroy()
+				Shadow:Destroy()
+			end
+			
+			lak(Header, Shadow)
+			
+			overlay.Gui = Shadow
+			return overlay
+		end
 		local ThemeDrop = addDropdownSelect(DropdownValue_1, DropdownValue_1, false, CallTheme, Theme, themes.index)
 		
 		CallTheme(Theme)
@@ -5510,6 +5611,7 @@ function Library:Window(p)
 
 		do
 		local CloseUI = p.CloseUIButton
+		if CloseUI then
 		local CloseUIShadow = Instance.new("ImageLabel")
 		local UIPaddingCloseUI_1 = Instance.new("UIPadding")
 		local BackgroundCloseUI_1 = Instance.new("Frame")
@@ -5602,6 +5704,7 @@ function Library:Window(p)
 				pcall(closeui)
 			end
 		end)
+		end
 		end
 	end
 	return Tabs

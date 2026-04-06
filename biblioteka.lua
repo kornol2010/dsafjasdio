@@ -166,7 +166,10 @@ local DefaultSettings = {
     HideUsername = true,
     StreamerName = "",
     tagName = "None",
-    Modifiers = {}
+    Modifiers = {},
+    ThemeName = "Dark",
+    MenuKeybindName = "LeftControl",
+    ShowStatusOverlay = true
 }
 
 local TimeScaleValues = {0.5, 1, 1.5, 2}
@@ -278,6 +281,8 @@ local function LoadSettings()
     SaveSettings()
 end
 
+local OverlayUpdate = nil
+
 local function SetSetting(name, value)
     if DefaultSettings[name] ~= nil then
         if name == "TimeScaleValue" then
@@ -285,6 +290,9 @@ local function SetSetting(name, value)
         end
         Globals[name] = value
         SaveSettings()
+        if OverlayUpdate then
+            pcall(OverlayUpdate)
+        end
     end
 end
 
@@ -954,24 +962,83 @@ end
 CurrentEquippedTowers = GetEquippedTowers()
 
 -- // ui
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/DuxiiT/auto-strat/refs/heads/main/Sources/UI.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/kornol2010/dsafjasdio/refs/heads/main/gui.lua"))()
+
+local function KeyCodeFromName(name)
+    if type(name) == "string" then
+        local code = Enum.KeyCode[name]
+        if code then
+            return code
+        end
+    end
+    return Enum.KeyCode.LeftControl
+end
+
+local MenuKeybind = KeyCodeFromName(Globals.MenuKeybindName)
+local ThemeName = Globals.ThemeName or "Dark"
 
 local Window = Library:Window({
     Title = "Panel",
     Desc = "",
-    Theme = "Dark",
+    Theme = ThemeName,
     Config = {
-        Keybind = Enum.KeyCode.LeftControl,
+        Keybind = MenuKeybind,
         Size = UDim2.new(0, 500, 0, 400)
     }
 })
 
-local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
-    Autostrat:Section({Title = "Główne"})
+pcall(function()
+    Window:SetUIToggleKeybind(MenuKeybind)
+end)
+pcall(function()
+    Window:SetTheme(ThemeName)
+end)
+
+local StatusOverlay = nil
+local function SetStatusOverlayEnabled(enabled)
+    if StatusOverlay then
+        StatusOverlay:Destroy()
+        StatusOverlay = nil
+    end
+    if enabled then
+        local ok, overlay = pcall(function()
+            return Window:CreateStatusOverlay({Title = "Enabled Features"})
+        end)
+        if ok then
+            StatusOverlay = overlay
+        end
+    end
+end
+
+OverlayUpdate = function()
+    if not StatusOverlay then
+        return
+    end
+    StatusOverlay:SetStates({
+        ["Auto Rejoin"] = Globals.AutoRejoin,
+        ["Auto Skip Waves"] = Globals.AutoSkip,
+        ["Auto Chain"] = Globals.AutoChain,
+        ["Support Caravan"] = Globals.SupportCaravan,
+        ["Auto DJ Booth"] = Globals.AutoDJ,
+        ["Auto Necro"] = Globals.AutoNecro,
+        ["TimeScale"] = Globals.TimeScaleEnabled,
+        ["Sell Farms"] = Globals.SellFarms,
+        ["Auto Pickups"] = Globals.AutoPickups,
+        ["Anti-Lag"] = Globals.AntiLag,
+        ["Disable 3D Rendering"] = Globals.Disable3DRendering,
+        ["Send Webhook"] = Globals.SendWebhook
+    })
+end
+
+SetStatusOverlayEnabled(Globals.ShowStatusOverlay)
+pcall(OverlayUpdate)
+
+local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
+    Autostrat:Section({Title = "Main"})
 
     Autostrat:Toggle({
-        Title = "Auto ponowne dołączenie",
-        Desc = "Po wygranej ponownie dołącza do trybu i uruchamia strategię od nowa.",
+        Title = "Auto Rejoin",
+        Desc = "Rejoins the gamemode after you've won and does the strategy again.",
         Value = Globals.AutoRejoin,
         Callback = function(v)
             SetSetting("AutoRejoin", v)
@@ -979,8 +1046,8 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     Autostrat:Toggle({
-        Title = "Auto pomijanie fal",
-        Desc = "Automatycznie pomija wszystkie fale.",
+        Title = "Auto Skip Waves",
+        Desc = "Skips all waves.",
         Value = Globals.AutoSkip,
         Callback = function(v)
             SetSetting("AutoSkip", v)
@@ -989,7 +1056,7 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
 
     Autostrat:Toggle({
         Title = "Auto Gatling",
-        Desc = "Ładuje zewnętrzny Auto Gatling (autor: DeadSignalFound na GitHub).",
+        Desc = "Automatically uses Gatling.",
         Value = Globals.AutoGatling,
         Callback = function(v)
             SetSetting("AutoGatling", v)
@@ -997,8 +1064,8 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     Autostrat:Toggle({
-        Title = "Auto łańcuch (Commander)",
-        Desc = "Łańcuchuje umiejętność Commandera.",
+        Title = "Auto Chain (Commander)",
+        Desc = "Chains Commander ability.",
         Value = Globals.AutoChain,
         Callback = function(v)
             SetSetting("AutoChain", v)
@@ -1006,8 +1073,8 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     Autostrat:Toggle({
-        Title = "Karawana wsparcia",
-        Desc = "Używa umiejętności Karawana wsparcia (Commander).",
+        Title = "Support Caravan",
+        Desc = "Uses Commander Support Caravan.",
         Value = Globals.SupportCaravan,
         Callback = function(v)
             SetSetting("SupportCaravan", v)
@@ -1016,7 +1083,7 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
 
     Autostrat:Toggle({
         Title = "Auto DJ Booth",
-        Desc = "Używa umiejętności DJ Booth.",
+        Desc = "Uses DJ Booth ability.",
         Value = Globals.AutoDJ,
         Callback = function(v)
             SetSetting("AutoDJ", v)
@@ -1024,18 +1091,18 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     Autostrat:Toggle({
-        Title = "Auto Necromancer",
-        Desc = "Używa umiejętności Necromancera.",
+        Title = "Auto Necro",
+        Desc = "Uses Necromancer ability.",
         Value = Globals.AutoNecro,
         Callback = function(v)
             SetSetting("AutoNecro", v)
         end
     })
 
-    Autostrat:Section({Title = "Prędkość gry"})
+    Autostrat:Section({Title = "TimeScale"})
     Autostrat:Toggle({
-        Title = "Włącz TimeScale",
-        Desc = "Odblokowuje i ustawia prędkość gry przy użyciu biletów.",
+        Title = "Enable TimeScale",
+        Desc = "Unlocks and sets game speed using tickets.",
         Value = Globals.TimeScaleEnabled,
         Callback = function(v)
             SetSetting("TimeScaleEnabled", v)
@@ -1046,8 +1113,8 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     Autostrat:Dropdown({
-        Title = "Prędkość TimeScale",
-        Desc = "Wybierz: 0.5, 1, 1.5, 2",
+        Title = "TimeScale Speed",
+        Desc = "Choose: 0.5, 1, 1.5, 2",
         List = {"0.5", "1", "1.5", "2"},
         Value = tostring(Globals.TimeScaleValue or 2),
         Callback = function(choice)
@@ -1061,7 +1128,7 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     Autostrat:Dropdown({
-        Title = "Modyfikatory:",
+        Title = "Modifiers:",
         List = AllModifiers,
         Value = Globals.Modifiers,
         Multi = true,
@@ -1070,10 +1137,10 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
         end
     })
 
-    Autostrat:Section({Title = "Farmy"})
+    Autostrat:Section({Title = "Farm"})
     Autostrat:Toggle({
-        Title = "Sprzedaj farmy",
-        Desc = "Sprzedaje wszystkie farmy na wskazanej fali.",
+        Title = "Sell Farms",
+        Desc = "Sells all your farms on the specified wave.",
         Value = Globals.SellFarms,
         Callback = function(v)
             SetSetting("SellFarms", v)
@@ -1081,8 +1148,8 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     Autostrat:Textbox({
-        Title = "Fala:",
-        Desc = "Fala, na której sprzedać farmy.",
+        Title = "Wave:",
+        Desc = "Wave to sell farms.",
         Placeholder = "40",
         Value = tostring(Globals.SellFarmsWave),
         ClearTextOnFocus = false,
@@ -1092,8 +1159,8 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
                 SetSetting("SellFarmsWave", number)
             else
                 Window:Notify({
-                    Title = "Błąd",
-                    Desc = "Nieprawidłowa liczba.",
+                    Title = "Error",
+                    Desc = "Invalid number entered!",
                     Time = 3,
                     Type = "error"
                 })
@@ -1101,10 +1168,10 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
         end
     })
 
-    Autostrat:Section({Title = "Umiejętności"})
+    Autostrat:Section({Title = "Abilities"})
     Autostrat:Toggle({
-        Title = "Pokaż marker odległości na ścieżce",
-        Desc = "Czerwony = Mercenary Base, zielony = Military Base.",
+        Title = "Enable Path Distance Marker",
+        Desc = "Red = Mercenary Base, Green = Military Base",
         Value = Globals.PathVisuals,
         Callback = function(v)
             SetSetting("PathVisuals", v)
@@ -1113,7 +1180,7 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
 
     Autostrat:Toggle({
         Title = "Auto Mercenary Base",
-        Desc = "Używa umiejętności Air-Drop.",
+        Desc = "Uses Air-Drop Ability",
         Value = Globals.AutoMercenary,
         Callback = function(v)
             SetSetting("AutoMercenary", v)
@@ -1121,7 +1188,7 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     MercenarySlider = Autostrat:Slider({
-        Title = "Odległość na ścieżce",
+        Title = "Path Distance",
         Min = 0,
         Max = 300,
         Rounding = 0,
@@ -1133,7 +1200,7 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
 
     Autostrat:Toggle({
         Title = "Auto Military Base",
-        Desc = "Używa umiejętności Airstrike.",
+        Desc = "Uses Airstrike Ability",
         Value = Globals.AutoMilitary,
         Callback = function(v)
             SetSetting("AutoMilitary", v)
@@ -1141,7 +1208,7 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     MilitarySlider = Autostrat:Slider({
-        Title = "Odległość na ścieżce",
+        Title = "Path Distance",
         Min = 0,
         Max = 300,
         Rounding = 0,
@@ -1162,10 +1229,10 @@ end
 
 Window:Line()
 
-local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
-    Main:Section({Title = "Opcje wież"})
+local Main = Window:Tab({Title = "Main", Icon = "stamp"}) do
+    Main:Section({Title = "Tower Options"})
     local TowerDropdown = Main:Dropdown({
-        Title = "Wieża:",
+        Title = "Tower:",
         List = CurrentEquippedTowers,
         Value = CurrentEquippedTowers[1],
         Callback = function(choice)
@@ -1193,8 +1260,8 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
     end)
 
     Main:Toggle({
-        Title = "Stakowanie wieży",
-        Desc = "Włącza stakowanie podczas stawiania.",
+        Title = "Stack Tower",
+        Desc = "Enables stacking placement.",
         Value = false,
         Callback = function(v)
             StackEnabled = v
@@ -1202,8 +1269,8 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
 
             if StackEnabled then
                 Window:Notify({
-                    Title = "Informacja",
-                    Desc = "Nie zakładaj wieży w loadoucie — tylko wybierz ją z listy i postaw w miejscu, gdzie chcesz.",
+                    Title = "Info",
+                    Desc = "Make sure not to equip the tower, only select it and then place where you want to!",
                     Time = 5,
                     Type = "normal"
                 })
@@ -1212,7 +1279,7 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
     })
 
     Main:Button({
-        Title = "Ulepsz wybrane",
+        Title = "Upgrade Selected",
         Desc = "",
         Callback = function()
             if SelectedTower then
@@ -1222,8 +1289,8 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
                     end
                 end
                 Window:Notify({
-                    Title = "Informacja",
-                    Desc = "Wysłano próbę ulepszenia wszystkich wybranych wież.",
+                    Title = "Info",
+                    Desc = "Attempted to upgrade all the selected towers!",
                     Time = 3,
                     Type = "normal"
                 })
@@ -1232,7 +1299,7 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
     })
 
     Main:Button({
-        Title = "Sprzedaj wybrane",
+        Title = "Sell Selected",
         Desc = "",
         Callback = function()
             if SelectedTower then
@@ -1242,8 +1309,8 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
                     end
                 end
                 Window:Notify({
-                    Title = "Informacja",
-                    Desc = "Wysłano próbę sprzedaży wszystkich wybranych wież.",
+                    Title = "Info",
+                    Desc = "Attempted to sell all the selected towers!",
                     Time = 3,
                     Type = "normal"
                 })
@@ -1252,7 +1319,7 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
     })
 
     Main:Button({
-        Title = "Ulepsz wszystkie",
+        Title = "Upgrade All",
         Desc = "",
         Callback = function()
             for _, v in pairs(workspace.Towers:GetChildren()) do
@@ -1261,8 +1328,8 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
                 end
             end
             Window:Notify({
-                Title = "Informacja",
-                Desc = "Wysłano próbę ulepszenia wszystkich wież.",
+                Title = "Info",
+                Desc = "Attempted to upgrade all the towers!",
                 Time = 3,
                 Type = "normal"
             })
@@ -1270,13 +1337,13 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
     })
 
     Main:Button({
-        Title = "Sprzedaj wszystkie",
+        Title = "Sell All",
         Desc = "",
         Callback = function()
             Window:Dialog({
-                Title = "Czy na pewno sprzedać wszystkie wieże?",
+                Title = "Do you want to sell all the towers?",
                 Button1 = {
-                    Title = "Potwierdź",
+                    Title = "Confirm",
                     Color = Color3.fromRGB(226, 39, 6),
                     Callback = function()
                         for _, v in pairs(workspace.Towers:GetChildren()) do
@@ -1286,15 +1353,15 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
                         end
 
                         Window:Notify({
-                            Title = "Informacja",
-                            Desc = "Wysłano próbę sprzedaży wszystkich wież.",
+                            Title = "Info",
+                            Desc = "Attempted to sell all the towers!",
                             Time = 3,
                             Type = "normal"
                         })
                     end
                 },
                 Button2 = {
-                    Title = "Anuluj",
+                    Title = "Cancel",
                     Color = Color3.fromRGB(0, 188, 0)
                 }
             })
@@ -1304,8 +1371,8 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
     Main:Section({Title = "Premium"})
 
     Main:Toggle({
-        Title = "Auto ładuj Premium (w grze)",
-        Desc = "Automatycznie ładuje system klucza po dołączeniu do meczu.",
+        Title = "Auto Load Premium (In-Game)",
+        Desc = "Automatically loads the key system when you join a match.",
         Value = Globals.AutoPremium,
         Callback = function(v)
             SetSetting("AutoPremium", v)
@@ -1313,18 +1380,18 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
     })
     
     local UnlockBtn = Main:Button({
-        Title = "Odblokuj funkcje Premium",
-        Desc = "Wymaga systemu klucza, aby używać opcji wyposażania.",
+        Title = "Unlock Premium Features",
+        Desc = "Required Key System to access Equipper",
         Callback = function()
             task.spawn(function()
-                Window:Notify({Title = "Informacja", Desc = "Ładowanie systemu klucza...", Time = 3})
+                Window:Notify({Title = "Info", Desc = "Loading Key System...", Time = 3})
 
                 local success = TDS:Addons()
 
                 if success then
                     Window:Notify({
-                        Title = "Informacja",
-                        Desc = "Premium odblokowane — wyposażanie jest aktywne.",
+                        Title = "Info",
+                        Desc = "Premium Unlocked! Equipper is now ACTIVE.",
                         Time = 5,
                         Type = "normal"
                     })
@@ -1333,9 +1400,9 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
         end
     })
 
-    Main:Section({Title = "Wyposażanie"})
+    Main:Section({Title = "Equipper"})
     Main:Textbox({
-        Title = "Załóż:",
+        Title = "Equip:",
         Desc = "",
         Placeholder = "",
         Value = "",
@@ -1345,8 +1412,8 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
             task.spawn(function()
                 if not TDS.Equip then
                     Window:Notify({
-                        Title = "Informacja",
-                        Desc = "Czekanie na zakończenie systemu klucza...",
+                        Title = "Info",
+                        Desc = "Waiting for Key System to finish...",
                         Time = 3,
                         Type = "normal"
                     })
@@ -1361,8 +1428,8 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
 
                 if success then
                     Window:Notify({
-                        Title = "Informacja",
-                        Desc = "Założono: " .. tostring(text),
+                        Title = "Info",
+                        Desc = "Successfully equipped: " .. tostring(text),
                         Time = 3,
                         Type = "normal"
                     })
@@ -1371,13 +1438,13 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
         end
     })
 
-    Main:Section({Title = "Statystyki"})
-    local CoinsLabel = Main:Label({Title = "Monety: 0", Desc = ""})
-    local GemsLabel = Main:Label({Title = "Gemy: 0", Desc = ""})
-    local LevelLabel = Main:Label({Title = "Poziom: 0", Desc = ""})
-    local WinsLabel = Main:Label({Title = "Wygrane: 0", Desc = ""})
-    local LosesLabel = Main:Label({Title = "Przegrane: 0", Desc = ""})
-    local ExpLabel = Main:Label({Title = "Doświadczenie: 0 / 0", Desc = ""})
+    Main:Section({Title = "Stats"})
+    local CoinsLabel = Main:Label({Title = "Coins: 0", Desc = ""})
+    local GemsLabel = Main:Label({Title = "Gems: 0", Desc = ""})
+    local LevelLabel = Main:Label({Title = "Level: 0", Desc = ""})
+    local WinsLabel = Main:Label({Title = "Wins: 0", Desc = ""})
+    local LosesLabel = Main:Label({Title = "Loses: 0", Desc = ""})
+    local ExpLabel = Main:Label({Title = "Experience: 0 / 0", Desc = ""})
     local ExpSlider = Main:Slider({
         Title = "EXP",
         Desc = "",
@@ -1518,12 +1585,12 @@ local Main = Window:Tab({Title = "Główne", Icon = "stamp"}) do
         if exp > MaxExp then
             MaxExp = exp
         end
-        if CoinsLabel then CoinsLabel:SetTitle("Monety: " .. tostring(coins)) end
-        if GemsLabel then GemsLabel:SetTitle("Gemy: " .. tostring(gems)) end
-        if LevelLabel then LevelLabel:SetTitle("Poziom: " .. tostring(lvl)) end
-        if WinsLabel then WinsLabel:SetTitle("Wygrane: " .. tostring(wins)) end
-        if LosesLabel then LosesLabel:SetTitle("Przegrane: " .. tostring(loses)) end
-        if ExpLabel then ExpLabel:SetTitle("Doświadczenie: " .. tostring(exp) .. " / " .. tostring(MaxExp)) end
+        if CoinsLabel then CoinsLabel:SetTitle("Coins: " .. tostring(coins)) end
+        if GemsLabel then GemsLabel:SetTitle("Gems: " .. tostring(gems)) end
+        if LevelLabel then LevelLabel:SetTitle("Level: " .. tostring(lvl)) end
+        if WinsLabel then WinsLabel:SetTitle("Wins: " .. tostring(wins)) end
+        if LosesLabel then LosesLabel:SetTitle("Loses: " .. tostring(loses)) end
+        if ExpLabel then ExpLabel:SetTitle("Experience: " .. tostring(exp) .. " / " .. tostring(MaxExp)) end
         if ExpSlider then
             ExpSlider:SetMin(0)
             ExpSlider:SetMax(MaxExp)
@@ -1597,11 +1664,11 @@ end
 
 Window:Line()
 
-local Strategies = Window:Tab({Title = "Strategie", Icon = "newspaper"}) do
-    Strategies:Section({Title = "Strategie Survival"})
+local Strategies = Window:Tab({Title = "Strategies", Icon = "newspaper"}) do
+    Strategies:Section({Title = "Survival Strategies"})
     Strategies:Toggle({
-        Title = "Tryb Frost",
-        Desc = "Drzewko umiejętności: MAX\n\nWieże:\nGolden Scout,\nFirework Technician,\nHacker,\nBrawler,\nDJ Booth,\nCommander,\nEngineer,\nAccelerator,\nTurret,\nMercenary Base",
+        Title = "Frost Mode",
+        Desc = "Skill tree: MAX\n\nTowers:\nGolden Scout,\nFirework Technician,\nHacker,\nBrawler,\nDJ Booth,\nCommander,\nEngineer,\nAccelerator,\nTurret,\nMercenary Base",
         Value = Globals.Frost,
         Callback = function(v)
             SetSetting("Frost", v)
@@ -1618,7 +1685,7 @@ local Strategies = Window:Tab({Title = "Strategie", Icon = "newspaper"}) do
                     local func, err = loadstring(content)
                     if func then
                         func() 
-                        Window:Notify({ Title = "Informacja", Desc = "Uruchamianie...", Time = 3 })
+                        Window:Notify({ Title = "Info", Desc = "Running...", Time = 3 })
                     end
                 end)
             end
@@ -1626,8 +1693,8 @@ local Strategies = Window:Tab({Title = "Strategie", Icon = "newspaper"}) do
     })
 
     Strategies:Toggle({
-        Title = "Tryb Fallen",
-        Desc = "Drzewko umiejętności: niepotrzebne\n\nWieże:\nGolden Scout,\nBrawler,\nMercenary Base,\nElectroshocker,\nEngineer",
+        Title = "Fallen Mode",
+        Desc = "Skill tree: Not needed\n\nTowers:\nGolden Scout,\nBrawler,\nMercenary Base,\nElectroshocker,\nEngineer",
         Value = Globals.Fallen,
         Callback = function(v)
             SetSetting("Fallen", v)
@@ -1644,7 +1711,7 @@ local Strategies = Window:Tab({Title = "Strategie", Icon = "newspaper"}) do
                     local func, err = loadstring(content)
                     if func then
                         func() 
-                        Window:Notify({ Title = "Informacja", Desc = "Uruchamianie...", Time = 3 })
+                        Window:Notify({ Title = "Info", Desc = "Running...", Time = 3 })
                     end
                 end)
             end
@@ -1652,8 +1719,8 @@ local Strategies = Window:Tab({Title = "Strategie", Icon = "newspaper"}) do
     })
 
     Strategies:Toggle({
-        Title = "Tryb Intermediate",
-        Desc = "Drzewko umiejętności: niepotrzebne\n\nWieże:\nShotgunner,\nCrook Boss",
+        Title = "Intermediate Mode",
+        Desc = "Skill tree: Not needed\n\nTowers:\nShotgunner,\nCrook Boss",
         Value = Globals.Intermediate,
         Callback = function(v)
             SetSetting("Intermediate", v)
@@ -1670,7 +1737,7 @@ local Strategies = Window:Tab({Title = "Strategie", Icon = "newspaper"}) do
                     local func, err = loadstring(content)
                     if func then
                         func() 
-                        Window:Notify({ Title = "Informacja", Desc = "Uruchamianie...", Time = 3 })
+                        Window:Notify({ Title = "Info", Desc = "Running...", Time = 3 })
                     end
                 end)
             end
@@ -1678,8 +1745,8 @@ local Strategies = Window:Tab({Title = "Strategie", Icon = "newspaper"}) do
     })
 
     Strategies:Toggle({
-        Title = "Tryb Casual",
-        Desc = "Drzewko umiejętności: niepotrzebne\n\nWieże:\nShotgunner",
+        Title = "Casual Mode",
+        Desc = "Skill tree: Not needed\n\nTowers:\nShotgunner",
         Value = Globals.Casual,
         Callback = function(v)
             SetSetting("Casual", v)
@@ -1696,7 +1763,7 @@ local Strategies = Window:Tab({Title = "Strategie", Icon = "newspaper"}) do
                     local func, err = loadstring(content)
                     if func then
                         func() 
-                        Window:Notify({ Title = "Informacja", Desc = "Uruchamianie...", Time = 3 })
+                        Window:Notify({ Title = "Info", Desc = "Running...", Time = 3 })
                     end
                 end)
             end
@@ -1704,8 +1771,8 @@ local Strategies = Window:Tab({Title = "Strategie", Icon = "newspaper"}) do
     })
 
     Strategies:Toggle({
-        Title = "Tryb Easy",
-        Desc = "Drzewko umiejętności: niepotrzebne\n\nWieże:\nNormal Scout",
+        Title = "Easy Mode",
+        Desc = "Skill tree: Not needed\n\nTowers:\nNormal Scout",
         Value = Globals.Easy,
         Callback = function(v)
             SetSetting("Easy", v)
@@ -1722,17 +1789,17 @@ local Strategies = Window:Tab({Title = "Strategie", Icon = "newspaper"}) do
                     local func, err = loadstring(content)
                     if func then
                         func() 
-                        Window:Notify({ Title = "Informacja", Desc = "Uruchamianie...", Time = 3 })
+                        Window:Notify({ Title = "Info", Desc = "Running...", Time = 3 })
                     end
                 end)
             end
         end
     })
 
-    Strategies:Section({Title = "Inne strategie"})
+    Strategies:Section({Title = "Other Strategies"})
     Strategies:Toggle({
-        Title = "Tryb Hardcore",
-        Desc = "Wieże:\nFarm,\nGolden Scout,\nDJ Booth,\nCommander,\nElectroshocker,\nRanger,\nFreezer,\nGolden Minigunner",
+        Title = "Hardcore Mode",
+        Desc = "Towers:\nFarm,\nGolden Scout,\nDJ Booth,\nCommander,\nElectroshocker,\nRanger,\nFreezer,\nGolden Minigunner",
         Value = Globals.Hardcore,
         Callback = function(v)
             SetSetting("Hardcore", v)
@@ -1749,7 +1816,7 @@ local Strategies = Window:Tab({Title = "Strategie", Icon = "newspaper"}) do
                     local func, err = loadstring(content)
                     if func then
                         func() 
-                        Window:Notify({ Title = "Informacja", Desc = "Uruchamianie...", Time = 3 })
+                        Window:Notify({ Title = "Info", Desc = "Running...", Time = 3 })
                     end
                 end)
             end
@@ -1759,11 +1826,11 @@ end
 
 Window:Line()
 
-local Misc = Window:Tab({Title = "Różne", Icon = "box"}) do
-    Misc:Section({Title = "Różne"})
+local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
+    Misc:Section({Title = "Misc"})
     Misc:Toggle({
-        Title = "Włącz Anti-Lag",
-        Desc = "Zwiększa FPS.",
+        Title = "Enable Anti-Lag",
+        Desc = "Boosts your FPS",
         Value = Globals.AntiLag,
         Callback = function(v)
             SetSetting("AntiLag", v)
@@ -1771,8 +1838,8 @@ local Misc = Window:Tab({Title = "Różne", Icon = "box"}) do
     })
 
     Misc:Toggle({
-        Title = "Wyłącz renderowanie 3D",
-        Desc = "Wyłącza renderowanie 3D.",
+        Title = "Disable 3d rendering",
+        Desc = "Turns off 3d rendering",
         Value = Globals.Disable3DRendering,
         Callback = function(v)
             SetSetting("Disable3DRendering", v)
@@ -1781,8 +1848,8 @@ local Misc = Window:Tab({Title = "Różne", Icon = "box"}) do
     })
 
     Misc:Toggle({
-        Title = "Auto zbieranie znajdziek",
-        Desc = "Zbiera Logbooki + walutę eventową.",
+        Title = "Auto Collect Pickups",
+        Desc = "Collects Logbooks + Event currency",
         Value = Globals.AutoPickups,
         Callback = function(v)
             SetSetting("AutoPickups", v)
@@ -1790,7 +1857,7 @@ local Misc = Window:Tab({Title = "Różne", Icon = "box"}) do
     })
 
     Misc:Dropdown({
-        Title = "Metoda zbierania",
+        Title = "Pickup Method",
         Desc = "",
         List = {"Pathfinding", "Instant"},
         Value = Globals.PickupMethod or "Pathfinding",
@@ -1804,18 +1871,18 @@ local Misc = Window:Tab({Title = "Różne", Icon = "box"}) do
     })
 
     Misc:Toggle({
-        Title = "Odbierz nagrody",
-        Desc = "Odbiera nagrody za czas gry i zużywa bilety spin w lobby.",
+        Title = "Claim Rewards",
+        Desc = "Claims your playtime and uses spin tickets in Lobby",
         Value = Globals.ClaimRewards,
         Callback = function(v)
             SetSetting("ClaimRewards", v)
         end
     })
 
-    Misc:Section({Title = "Eksperymentalne"})
+    Misc:Section({Title = "Experimental"})
     Misc:Toggle({
-        Title = "Spam naklejek",
-        Desc = "Może zbić FPS wszystkim do ~5 (zwykle nie zobaczysz efektu bez alty).",
+        Title = "Sticker Spam",
+        Desc = "This will drop everyones FPS to like 5 (you will not be able to see this unless you have an alt)",
         Value = false,
         Callback = function(v)
             StickerSpam = v
@@ -1837,8 +1904,8 @@ local Misc = Window:Tab({Title = "Różne", Icon = "box"}) do
     })
 
     Misc:Button({
-        Title = "Odblokuj Admin+ (Sandbox)",
-        Desc = "Część funkcji (wybór map, spawn wrogów, zmiana statystyk) może nie działać.",
+        Title = "Unlock Admin+ (Sandbox)",
+        Desc = "Keep in mind that some features such as selecting maps, spawning in enemies and changing tower stats will not work!",
         Callback = function()
             if GameState == "GAME" then
                 local args = {
@@ -1849,15 +1916,15 @@ local Misc = Window:Tab({Title = "Różne", Icon = "box"}) do
                 game:GetService("ReplicatedStorage"):WaitForChild("Network"):WaitForChild("Sandbox"):WaitForChild("RE:SetAdmin"):FireServer(unpack(args))
 
                 Window:Notify({
-                    Title = "Informacja",
-                    Desc = "Odblokowano tryb Admin+.",
+                    Title = "Info",
+                    Desc = "Successfully unlocked Admin+ Mode!",
                     Time = 3,
                     Type = "normal"
                 })
             else
                 Window:Notify({
-                    Title = "Błąd",
-                    Desc = "Musisz być w trybie Sandbox, żeby to zadziałało.",
+                    Title = "Info",
+                    Desc = "You must be in Sandbox mode for this to work!",
                     Time = 3,
                     Type = "normal"
                 })
@@ -1870,9 +1937,9 @@ Window:Line()
 
 local Logger
 
-local Logger = Window:Tab({Title = "Logi", Icon = "notebook-pen"}) do
+local Logger = Window:Tab({Title = "Logger", Icon = "notebook-pen"}) do
     Logger = Logger:CreateLogger({
-        Title = "LOG STRATEGII:",
+        Title = "STRATEGY LOGGER:",
         Size = UDim2.new(0, 330, 0, 300)
     })
 end
@@ -1891,14 +1958,67 @@ RecorderInit({
 
 Window:Line()
 
-local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
-    Settings:Section({Title = "Ustawienia"})
+local Settings = Window:Tab({Title = "Settings", Icon = "settings"}) do
+    Settings:Section({Title = "UI"})
+    Settings:Keybind({
+        Title = "Menu Keybind",
+        Desc = "Key to show/hide the UI",
+        Key = MenuKeybind,
+        Callback = function(key)
+            local name = tostring(key):gsub("Enum.KeyCode.", "")
+            SetSetting("MenuKeybindName", name)
+            MenuKeybind = key
+            pcall(function()
+                Window:SetUIToggleKeybind(key)
+            end)
+        end
+    })
+
+    do
+        local themeList = {"Dark"}
+        pcall(function()
+            themeList = Window:GetThemeList()
+        end)
+        Settings:Dropdown({
+            Title = "Theme",
+            Desc = "",
+            List = themeList,
+            Value = Globals.ThemeName or "Dark",
+            Callback = function(choice)
+                local selected = choice
+                if type(choice) == "table" then
+                    selected = choice[1]
+                end
+                if not selected or selected == "" then
+                    selected = "Dark"
+                end
+                SetSetting("ThemeName", selected)
+                ThemeName = selected
+                pcall(function()
+                    Window:SetTheme(selected)
+                end)
+            end
+        })
+    end
+
+    Settings:Toggle({
+        Title = "Status Overlay",
+        Desc = "Shows a draggable overlay of enabled features",
+        Value = Globals.ShowStatusOverlay,
+        Callback = function(v)
+            SetSetting("ShowStatusOverlay", v)
+            SetStatusOverlayEnabled(v)
+            pcall(OverlayUpdate)
+        end
+    })
+
+    Settings:Section({Title = "Settings"})
     Settings:Button({
-        Title = "Zapisz ustawienia",
+        Title = "Save Settings",
         Callback = function()
             Window:Notify({
-                    Title = "Informacja",
-                    Desc = "Ustawienia zapisane.",
+                    Title = "Info",
+                    Desc = "Settings Saved!",
                     Time = 3,
                     Type = "normal"
                 })
@@ -1907,11 +2027,11 @@ local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
     })
 
     Settings:Button({
-        Title = "Wczytaj ustawienia",
+        Title = "Load Settings",
         Callback = function()
             Window:Notify({
-                    Title = "Informacja",
-                    Desc = "Ustawienia wczytane.",
+                    Title = "Info",
+                    Desc = "Settings Loaded!",
                     Time = 3,
                     Type = "normal"
                 })
@@ -1919,9 +2039,9 @@ local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
         end
     })
 
-    Settings:Section({Title = "Prywatność"})
+    Settings:Section({Title = "Privacy"})
     Settings:Toggle({
-        Title = "Ukryj nazwę użytkownika",
+        Title = "Hide Username",
         Desc = "",
         Value = Globals.HideUsername,
         Callback = function(v)
@@ -1931,9 +2051,9 @@ local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
     })
 
     Settings:Textbox({
-        Title = "Nazwa streamera",
+        Title = "Streamer Name",
         Desc = "",
-        Placeholder = "Zamienna nazwa",
+        Placeholder = "Spoof Name",
         Value = Globals.StreamerName or "",
         ClearTextOnFocus = false,
         Callback = function(value)
@@ -1943,7 +2063,7 @@ local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
     })
 
     Settings:Toggle({
-        Title = "Tryb streamera",
+        Title = "Streamer Mode",
         Desc = "",
         Value = Globals.StreamerMode,
         Callback = function(v)
@@ -1952,7 +2072,7 @@ local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
         end
     })
 
-    Settings:Section({Title = "Tagi"})
+    Settings:Section({Title = "Tags"})
     local tagOptions = collectTagOptions()
     local tagValue = Globals.tagName or "None"
     if not table.find(tagOptions, tagValue) then
@@ -1982,7 +2102,7 @@ local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
 
     Settings:Section({Title = "Webhook"})
     Settings:Toggle({
-        Title = "Wysyłaj webhook",
+        Title = "Send Webhook",
         Desc = "",
         Value = Globals.SendWebhook,
         Callback = function(v)
@@ -1991,10 +2111,10 @@ local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
     })
 
     Settings:Button({
-        Title = "Test webhook",
+        Title = "Test Webhook",
         Callback = function()
             if not Globals.WebhookURL or Globals.WebhookURL == "" then
-                return Window:Notify({Title = "Błąd", Desc = "Adres webhooka jest pusty.", Time = 3, Type = "error"})
+                return Window:Notify({Title = "Error", Desc = "Webhook URL is empty!", Time = 3, Type = "error"})
             end
 
             local success, response = pcall(function()
@@ -2002,21 +2122,21 @@ local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
                     Url = Globals.WebhookURL,
                     Method = "POST",
                     Headers = { ["Content-Type"] = "application/json" },
-                    Body = game:GetService("HttpService"):JSONEncode({["content"] = "Test webhooka"})
+                    Body = game:GetService("HttpService"):JSONEncode({["content"] = "Webhook Test"})
                 })
             end)
 
             if success and response.StatusCode >= 200 and response.StatusCode < 300 then
                 Window:Notify({
-                    Title = "Informacja",
-                    Desc = "Webhook wysłany — działa poprawnie.",
+                    Title = "Info",
+                    Desc = "Webhook sent successfully and is working!",
                     Time = 3,
                     Type = "normal"
                 })
             else
                 Window:Notify({
-                    Title = "Błąd",
-                    Desc = "Nieprawidłowy webhook — Discord zwrócił błąd.",
+                    Title = "Error",
+                    Desc = "Invalid Webhook, Discord returned an error.",
                     Time = 5,
                     Type = "error"
                 })
@@ -2025,7 +2145,7 @@ local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
     })
 
     Settings:Textbox({
-        Title = "Adres webhooka:",
+        Title = "Webhook URL:",
         Desc = "",
         Placeholder = "https://discord.com/api/webhooks/...",
         Value = Globals.WebhookURL,
@@ -2035,15 +2155,15 @@ local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
                 SetSetting("WebhookURL", value)
 
                 Window:Notify({
-                    Title = "Informacja",
-                    Desc = "Webhook ustawiony.",
+                    Title = "Info",
+                    Desc = "Webhook is successfully set!",
                     Time = 3,
                     Type = "normal"
                 })
             else
                 Window:Notify({
-                    Title = "Błąd",
-                    Desc = "Nieprawidłowy adres webhooka.",
+                    Title = "Info",
+                    Desc = "Invalid Webhook URL!",
                     Time = 3,
                     Type = "normal"
                 })
@@ -2292,42 +2412,42 @@ local function HandlePostMatch()
             BonusString = BonusString .. "🎁 **" .. res.Amount .. " " .. res.Name .. "**\n"
         end
     else
-        BonusString = "_Brak bonusowych nagród._"
+        BonusString = "_No bonus rewards found._"
     end
 
     local PostData = {
         username = "TDS",
         embeds = {{
-            title = (match.Status == "WIN" and "🏆 ZWYCIĘSTWO" or "💀 PORAŻKA"),
+            title = (match.Status == "WIN" and "🏆 TRIUMPH" or "💀 DEFEAT"),
             color = (match.Status == "WIN" and 0x2ecc71 or 0xe74c3c),
             description =
-                "### 📋 Podsumowanie meczu\n" ..
+                "### 📋 Match Overview\n" ..
                 "> **Status:** `" .. match.Status .. "`\n" ..
-                "> **Czas:** `" .. match.Time .. "`\n" ..
-                "> **Poziom:** `" .. match.Level .. "`\n" ..
-                "> **Fala:** `" .. match.Wave .. "`\n",
+                "> **Time:** `" .. match.Time .. "`\n" ..
+                "> **Current Level:** `" .. match.Level .. "`\n" ..
+                "> **Wave:** `" .. match.Wave .. "`\n",
 
             fields = {
                 {
-                    name = "✨ Nagrody",
+                    name = "✨ Rewards",
                     value = "```ansi\n" ..
-                            "[2;33mMonety:[0m +" .. match.Coins .. "\n" ..
-                            "[2;34mGemy:  [0m +" .. match.Gems .. "\n" ..
+                            "[2;33mCoins:[0m +" .. match.Coins .. "\n" ..
+                            "[2;34mGems: [0m +" .. match.Gems .. "\n" ..
                             "[2;32mXP:   [0m +" .. match.XP .. "```",
                     inline = false
                 },
                 {
-                    name = "🎁 Bonusy",
+                    name = "🎁 Bonus Items",
                     value = BonusString,
                     inline = true
                 },
                 {
-                    name = "📊 Suma sesji",
-                    value = "```py\n# Łącznie\nMonety: " .. CurrentTotalCoins .. "\nGemy:   " .. CurrentTotalGems .. "```",
+                    name = "📊 Session Totals",
+                    value = "```py\n# Total Amount\nCoins: " .. CurrentTotalCoins .. "\nGems:  " .. CurrentTotalGems .. "```",
                     inline = true
                 }
             },
-            footer = { text = "Zapisano dla: " .. LocalPlayer.Name },
+            footer = { text = "Logged for " .. LocalPlayer.Name .. " • TDS" },
             timestamp = DateTime.now():ToIsoDate()
         }}
     }
@@ -3218,8 +3338,8 @@ local function StartAutoPremium()
     task.spawn(function()
         if GameState == "GAME" and not PremiumLoaded then
             Window:Notify({
-                Title = "Informacja",
-                Desc = "Ładowanie systemu klucza...",
+                Title = "Info",
+                Desc = "Loading Key System...",
                 Time = 3,
                 Type = "normal"
             })
@@ -3228,8 +3348,8 @@ local function StartAutoPremium()
             
             if success then
                 Window:Notify({
-                    Title = "Informacja",
-                    Desc = "Premium odblokowane.",
+                    Title = "Info",
+                    Desc = "Premium Unlocked!",
                     Time = 3,
                     Type = "normal"
                 })
