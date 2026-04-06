@@ -945,8 +945,8 @@ CurrentEquippedTowers = GetEquippedTowers()
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/kornol2010/dsafjasdio/refs/heads/main/gui.lua"))()
 
 local Window = Library:Window({
-    Title = "Panel",
-    Desc = "",
+    Title = "Oblivion",
+    Desc = "jeden z najelpszych paneli do tds",
     Theme = "Dark",
     Config = {
         Keybind = Enum.KeyCode.LeftControl,
@@ -958,7 +958,7 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     Autostrat:Section({Title = "Główne"})
 
     Autostrat:Toggle({
-        Title = "Auto ponowne dołączenie",
+        Title = "Ponowne dołączenie",
         Desc = "Po wygranej ponownie dołącza do trybu i uruchamia strategię od nowa.",
         Value = Globals.AutoRejoin,
         Callback = function(v)
@@ -967,7 +967,7 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     Autostrat:Toggle({
-        Title = "Auto pomijanie fal",
+        Title = "Automatyczne pomijanie fal",
         Desc = "Automatycznie pomija wszystkie fale.",
         Value = Globals.AutoSkip,
         Callback = function(v)
@@ -977,7 +977,7 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
 
     Autostrat:Toggle({
         Title = "Auto Gatling",
-        Desc = "Ładuje zewnętrzny Auto Gatling (autor: DeadSignalFound na GitHub).",
+        Desc = "Automatycznie strzela z Gatlinga.",
         Value = Globals.AutoGatling,
         Callback = function(v)
             SetSetting("AutoGatling", v)
@@ -985,8 +985,8 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     Autostrat:Toggle({
-        Title = "Auto łańcuch (Commander)",
-        Desc = "Łańcuchuje umiejętność Commandera.",
+        Title = "Auto Chain (Commander)",
+        Desc = "Automatycznie Chainuje abilitke Commandera.",
         Value = Globals.AutoChain,
         Callback = function(v)
             SetSetting("AutoChain", v)
@@ -994,8 +994,8 @@ local Autostrat = Window:Tab({Title = "Autostrategia", Icon = "star"}) do
     })
 
     Autostrat:Toggle({
-        Title = "Karawana wsparcia",
-        Desc = "Używa umiejętności Karawana wsparcia (Commander).",
+        Title = "konwój wsparcia",
+        Desc = "Używa umiejętności konwoju (Commander).",
         Value = Globals.SupportCaravan,
         Callback = function(v)
             SetSetting("SupportCaravan", v)
@@ -1919,9 +1919,9 @@ local Settings = Window:Tab({Title = "Ustawienia", Icon = "settings"}) do
     })
 
     Settings:Textbox({
-        Title = "Nazwa streamera",
+        Title = "Nazwa gracza",
         Desc = "",
-        Placeholder = "Zamienna nazwa",
+        Placeholder = "Zamień nazwe",
         Value = Globals.StreamerName or "",
         ClearTextOnFocus = false,
         Callback = function(value)
