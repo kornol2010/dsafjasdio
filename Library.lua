@@ -972,9 +972,10 @@ end
 
 local MenuKeybind = KeyCodeFromName(Globals.MenuKeybindName)
 local ThemeName = Globals.ThemeName or "Dark"
+local MenuTitle = "Panel"
 
 local Window = Library:Window({
-    Title = "Panel",
+    Title = MenuTitle,
     Desc = "",
     Theme = ThemeName,
     Config = {
@@ -999,7 +1000,7 @@ local function SetStatusOverlayEnabled(enabled)
     if enabled then
         local ok, overlay = pcall(function()
             return Window:CreateStatusOverlay({
-                Title = "Enabled Features",
+                Title = MenuTitle,
                 ScalePercent = Globals.OverlayScalePercent or 100
             })
         end)
@@ -1996,6 +1997,10 @@ local Settings = Window:Tab({Title = "Settings", Icon = "settings"}) do
                 pcall(function()
                     Window:SetTheme(selected)
                 end)
+                if Globals.ShowStatusOverlay then
+                    SetStatusOverlayEnabled(true)
+                    pcall(OverlayUpdate)
+                end
             end
         })
     end

@@ -5478,7 +5478,7 @@ function Library:Window(p)
 		function Tabs:CreateStatusOverlay(p)
 			p = p or {}
 			local overlay = {}
-			local titleText = p.Title or "Enabled Features"
+			local titleText = p.Title or "Menu"
 			local startPos = p.Position or UDim2.new(0, 20, 0, 120)
 			local scalePercent = tonumber(p.ScalePercent) or 100
 			if scalePercent < 50 then scalePercent = 50 end
@@ -5488,9 +5488,11 @@ function Library:Window(p)
 			local headerH = math.floor(34 * scale)
 			local rowH = math.floor(26 * scale)
 			local padding = math.floor(10 * scale)
-			local corner = math.floor(12 * scale)
+			local corner = math.floor(18 * scale)
 			local fontSizeTitle = math.floor(16 * scale)
 			local fontSizeRow = math.floor(14 * scale)
+			local layoutPadding = math.floor(6 * scale)
+			local accentOn = Color3.fromRGB(0, 220, 0)
 
 			local Root = Instance.new("Frame")
 			Root.Name = "StatusOverlay"
@@ -5513,7 +5515,7 @@ function Library:Window(p)
 			Header.Position = UDim2.new(0, 0, 0, 0)
 			Header.AutoButtonColor = false
 			Header.Text = ""
-			addToTheme("Main", Header)
+			addToTheme("Page", Header)
 
 			local HeaderTitle = Instance.new("TextLabel")
 			HeaderTitle.Name = "Title"
@@ -5552,9 +5554,12 @@ function Library:Window(p)
 			Layout.FillDirection = Enum.FillDirection.Vertical
 			Layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 			Layout.SortOrder = Enum.SortOrder.LayoutOrder
-			Layout.Padding = UDim.new(0, math.floor(6 * scale))
+			Layout.Padding = UDim.new(0, layoutPadding)
 
 			local items = {}
+			local rainbowLabels = {}
+			local rainbowConn = nil
+			local rainbowRotation = 0
 
 			local function attachRainbow(textLabel)
 				local g = Instance.new("UIGradient")
@@ -5567,6 +5572,23 @@ function Library:Window(p)
 					ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0, 170, 255)),
 					ColorSequenceKeypoint.new(1.0, Color3.fromRGB(170, 0, 255)),
 				}
+				g.Rotation = 0
+				rainbowLabels[#rainbowLabels + 1] = g
+				return g
+			end
+
+			local function startRainbow()
+				if rainbowConn then
+					return
+				end
+				rainbowConn = game:GetService("RunService").RenderStepped:Connect(function(dt)
+					rainbowRotation = (rainbowRotation + (dt * 90)) % 360
+					for _, g in ipairs(rainbowLabels) do
+						if g and g.Parent then
+							g.Rotation = rainbowRotation
+						end
+					end
+				end)
 			end
 
 			local function ensureRow(label)
@@ -5580,7 +5602,9 @@ function Library:Window(p)
 				Row.Parent = List
 				Row.BackgroundTransparency = 1
 				Row.BorderSizePixel = 0
-				Row.Size = UDim2.new(1, 0, 0, rowH)
+				Row.ClipsDescendants = true
+				Row.Size = UDim2.new(1, 0, 0, 0)
+				Row.Visible = false
 
 				local Name = Instance.new("TextLabel")
 				Name.Name = "Name"
@@ -5592,7 +5616,7 @@ function Library:Window(p)
 				Name.TextSize = fontSizeRow
 				Name.TextXAlignment = Enum.TextXAlignment.Left
 				Name.Text = label
-				addToTheme("Text & Icon", Name)
+				Name.TextTransparency = 1
 
 				local State = Instance.new("TextLabel")
 				State.Name = "State"
@@ -5603,43 +5627,128 @@ function Library:Window(p)
 				State.Font = Enum.Font.GothamBold
 				State.TextSize = fontSizeRow
 				State.TextXAlignment = Enum.TextXAlignment.Right
-				State.Text = "OFF"
-				addToTheme("Text & Icon", State)
+				State.Text = "ON"
+				State.TextTransparency = 1
+				State.Visible = false
 
-				if (Tabs.CurrentTheme or Theme) == "Dark" then
+				local isDark = (Tabs.CurrentTheme or Theme) == "Dark"
+				if isDark then
+					Name.TextColor3 = Color3.fromRGB(255, 255, 255)
+					State.TextColor3 = accentOn
 					attachRainbow(Name)
-					attachRainbow(State)
+					startRainbow()
+				else
+					addToTheme("Text & Icon", Name)
 				end
 
-				items[label] = {Row = Row, Name = Name, State = State}
+				items[label] = {
+					Row = Row,
+					Name = Name,
+					State = State,
+					Enabled = false,
+					IsDark = isDark,
+				}
 				return items[label]
 			end
 
-			local function recalcSize(visibleCount)
+			local function computeHeight(visibleCount)
 				local count = visibleCount or 0
-				if count < 1 then count = 1 end
-				local h = headerH + (padding * 2) + (rowH * count) + (Layout.Padding.Offset * math.max(count - 1, 0))
-				Root.Size = UDim2.new(0, width, 0, h)
+				if count < 0 then count = 0 end
+				if count == 0 then
+					return headerH + (padding * 2)
+				end
+				return headerH + (padding * 2) + (rowH * count) + (layoutPadding * math.max(count - 1, 0))
+			end
+
+			local function tweenRootHeight(h)
+				tw({
+					v = Root,
+					t = 0.18,
+					s = Enum.EasingStyle.Exponential,
+					d = "Out",
+					g = {Size = UDim2.new(0, width, 0, h)}
+				}):Play()
+			end
+
+			local function tweenRow(entry, enabled)
+				local row = entry.Row
+				local name = entry.Name
+				local state = entry.State
+
+				if enabled then
+					entry.Enabled = true
+					row.Visible = true
+					state.Visible = true
+					state.Text = "ON"
+					state.TextColor3 = accentOn
+					if not entry.IsDark then
+						addToTheme("Text & Icon", state)
+					else
+						state.TextColor3 = accentOn
+					end
+
+					tw({v = row, t = 0.18, s = Enum.EasingStyle.Exponential, d = "Out", g = {Size = UDim2.new(1, 0, 0, rowH)}}):Play()
+					tw({v = name, t = 0.18, s = Enum.EasingStyle.Exponential, d = "Out", g = {TextTransparency = 0}}):Play()
+					tw({v = state, t = 0.18, s = Enum.EasingStyle.Exponential, d = "Out", g = {TextTransparency = 0}}):Play()
+				else
+					if not row.Visible then
+						entry.Enabled = false
+						return
+					end
+					entry.Enabled = false
+					tw({v = name, t = 0.14, s = Enum.EasingStyle.Exponential, d = "Out", g = {TextTransparency = 1}}):Play()
+					tw({v = state, t = 0.14, s = Enum.EasingStyle.Exponential, d = "Out", g = {TextTransparency = 1}}):Play()
+					local shrink = tw({v = row, t = 0.16, s = Enum.EasingStyle.Exponential, d = "Out", g = {Size = UDim2.new(1, 0, 0, 0)}})
+					shrink:Play()
+					task.spawn(function()
+						shrink.Completed:Wait()
+						if row and row.Parent and not entry.Enabled then
+							row.Visible = false
+							state.Visible = false
+						end
+					end)
+				end
 			end
 
 			function overlay:SetState(label, enabled)
 				local entry = ensureRow(label)
 				local isOn = enabled and true or false
-				entry.State.Text = isOn and "ON" or "OFF"
+				if isOn then
+					if not entry.Enabled then
+						tweenRow(entry, true)
+					end
+				else
+					if entry.Enabled then
+						tweenRow(entry, false)
+					end
+				end
 			end
 
 			function overlay:SetStates(map)
-				local keys = {}
-				for label, _ in pairs(map or {}) do
-					keys[#keys + 1] = tostring(label)
+				local enabledKeys = {}
+				local desired = map or {}
+				for label, v in pairs(desired) do
+					if v then
+						enabledKeys[#enabledKeys + 1] = tostring(label)
+					end
 				end
-				table.sort(keys)
-				for i, label in ipairs(keys) do
+				table.sort(enabledKeys)
+
+				local enabledSet = {}
+				for i, label in ipairs(enabledKeys) do
+					enabledSet[label] = true
 					local entry = ensureRow(label)
 					entry.Row.LayoutOrder = i
-					overlay:SetState(label, map[label])
+					overlay:SetState(label, true)
 				end
-				recalcSize(#keys)
+
+				for label, entry in pairs(items) do
+					if entry and entry.Enabled and not enabledSet[label] then
+						overlay:SetState(label, false)
+					end
+				end
+
+				tweenRootHeight(computeHeight(#enabledKeys))
 			end
 
 			function overlay:SetScalePercent(newPercent)
@@ -5653,6 +5762,10 @@ function Library:Window(p)
 			end
 
 			function overlay:Destroy()
+				if rainbowConn then
+					rainbowConn:Disconnect()
+					rainbowConn = nil
+				end
 				Root:Destroy()
 			end
 
