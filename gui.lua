@@ -552,11 +552,38 @@ ScreenGui.Parent = game:GetService("CoreGui")
 local U, Tw = game:GetService("UserInputService"), game:GetService("TweenService")
 
 do
+	local CurrentThemeState = nil
 	function addToTheme(name, obj)
 		if not SaveTheme[name] then
 			SaveTheme[name] = {}
 		end
 		table.insert(SaveTheme[name], obj)
+		if CurrentThemeState and obj and obj.Parent then
+			local result = CurrentThemeState
+			for _, part in ipairs(string.split(name, ".")) do
+				result = result and result[part]
+			end
+			local color = result
+			if color then
+				if obj:IsA("Frame") or obj:IsA("CanvasGroup") then
+					obj.BackgroundColor3 = color
+					local glassBorder = obj:FindFirstChild("GlassBorder")
+					if glassBorder then
+						glassBorder.Visible = false
+					end
+				elseif obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+					obj.TextColor3 = color
+				elseif obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+					obj.ImageColor3 = color
+				elseif obj:IsA("ScrollingFrame") then
+					obj.ScrollBarImageColor3 = color
+				elseif obj:IsA("UIStroke") then
+					obj.Color = color
+				elseif obj:IsA("UIGradient") then
+					obj.Color = color
+				end
+			end
+		end
 	end
 	function getColorFromPath(tbl, path)
 		local result = tbl
@@ -566,6 +593,7 @@ do
 		return result
 	end
 	function Library:setTheme(st)
+		CurrentThemeState = st
 		for name, objs in pairs(SaveTheme) do
 			if not objs or #objs == 0 then 
 			else
@@ -1712,6 +1740,8 @@ function Library:Window(p)
 	DropdownValue_1.Position = UDim2.new(1, DiscordLink and -25 or 0,0.5, 0)
 	DropdownValue_1.Size = UDim2.new(0, 120,0, 20)
 	DropdownValue_1.Transparency = 1
+	DropdownValue_1.Visible = false
+	DropdownValue_1.Size = UDim2.new(0, 0,0, 0)
 
 	Td_1.Name = "Td"
 	Td_1.Parent = Topbar_1
@@ -5448,134 +5478,190 @@ function Library:Window(p)
 		function Tabs:CreateStatusOverlay(p)
 			p = p or {}
 			local overlay = {}
-			local titleText = p.Title or "Enabled"
+			local titleText = p.Title or "Enabled Features"
 			local startPos = p.Position or UDim2.new(0, 20, 0, 120)
-			local width = p.Width or 220
-			local maxRows = p.MaxRows or 10
-			
-			local Shadow = Instance.new("ImageLabel")
-			Shadow.Name = "StatusOverlayShadow"
-			Shadow.Parent = ScreenGui
-			Shadow.BackgroundTransparency = 1
-			Shadow.Position = startPos
-			Shadow.Size = UDim2.new(0, width, 0, 34 + (maxRows * 18))
-			Shadow.Image = "rbxassetid://1316045217"
-			Shadow.ImageTransparency = 0.5
-			Shadow.ScaleType = Enum.ScaleType.Slice
-			Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
-			addToTheme("Shadow", Shadow)
+			local scalePercent = tonumber(p.ScalePercent) or 100
+			if scalePercent < 50 then scalePercent = 50 end
+			if scalePercent > 300 then scalePercent = 300 end
+			local scale = scalePercent / 100
+			local width = math.floor((p.Width or 320) * scale)
+			local headerH = math.floor(34 * scale)
+			local rowH = math.floor(26 * scale)
+			local padding = math.floor(10 * scale)
+			local corner = math.floor(12 * scale)
+			local fontSizeTitle = math.floor(16 * scale)
+			local fontSizeRow = math.floor(14 * scale)
 
-			local Padding = Instance.new("UIPadding")
-			Padding.Parent = Shadow
-			Padding.PaddingTop = UDim.new(0, 6)
-			Padding.PaddingBottom = UDim.new(0, 6)
-			Padding.PaddingLeft = UDim.new(0, 6)
-			Padding.PaddingRight = UDim.new(0, 6)
+			local Root = Instance.new("Frame")
+			Root.Name = "StatusOverlay"
+			Root.Parent = ScreenGui
+			Root.BorderSizePixel = 0
+			Root.ClipsDescendants = true
+			Root.Position = startPos
+			Root.Size = UDim2.new(0, width, 0, headerH + padding + (rowH * 8))
+			addToTheme("Background", Root)
 
-			local Bg = Instance.new("Frame")
-			Bg.Name = "Background"
-			Bg.Parent = Shadow
-			Bg.BorderSizePixel = 0
-			Bg.Size = UDim2.new(1, 0, 1, 0)
-			addToTheme("Background", Bg)
-			
-			local Corner = Instance.new("UICorner")
-			Corner.Parent = Bg
-			Corner.CornerRadius = UDim.new(0, 6)
-			
+			local RootCorner = Instance.new("UICorner")
+			RootCorner.Parent = Root
+			RootCorner.CornerRadius = UDim.new(0, corner)
+
 			local Header = Instance.new("TextButton")
 			Header.Name = "Header"
-			Header.Parent = Bg
+			Header.Parent = Root
 			Header.BorderSizePixel = 0
-			Header.Size = UDim2.new(1, 0, 0, 22)
+			Header.Size = UDim2.new(1, 0, 0, headerH)
+			Header.Position = UDim2.new(0, 0, 0, 0)
 			Header.AutoButtonColor = false
 			Header.Text = ""
 			addToTheme("Main", Header)
-			
-			local HeaderCorner = Instance.new("UICorner")
-			HeaderCorner.Parent = Header
-			HeaderCorner.CornerRadius = UDim.new(0, 6)
-			
+
 			local HeaderTitle = Instance.new("TextLabel")
+			HeaderTitle.Name = "Title"
 			HeaderTitle.Parent = Header
 			HeaderTitle.BackgroundTransparency = 1
-			HeaderTitle.Size = UDim2.new(1, -10, 1, 0)
-			HeaderTitle.Position = UDim2.new(0, 10, 0, 0)
+			HeaderTitle.Size = UDim2.new(1, -padding, 1, 0)
+			HeaderTitle.Position = UDim2.new(0, padding, 0, 0)
 			HeaderTitle.Font = Enum.Font.GothamBold
-			HeaderTitle.TextSize = 12
+			HeaderTitle.TextSize = fontSizeTitle
 			HeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
 			HeaderTitle.Text = titleText
 			addToTheme("Text & Icon", HeaderTitle)
-			
+
+			local Body = Instance.new("Frame")
+			Body.Name = "Body"
+			Body.Parent = Root
+			Body.BackgroundTransparency = 1
+			Body.Position = UDim2.new(0, 0, 0, headerH)
+			Body.Size = UDim2.new(1, 0, 1, -headerH)
+
+			local BodyPadding = Instance.new("UIPadding")
+			BodyPadding.Parent = Body
+			BodyPadding.PaddingLeft = UDim.new(0, padding)
+			BodyPadding.PaddingRight = UDim.new(0, padding)
+			BodyPadding.PaddingTop = UDim.new(0, padding)
+			BodyPadding.PaddingBottom = UDim.new(0, padding)
+
 			local List = Instance.new("Frame")
 			List.Name = "List"
-			List.Parent = Bg
+			List.Parent = Body
 			List.BackgroundTransparency = 1
-			List.Position = UDim2.new(0, 0, 0, 26)
-			List.Size = UDim2.new(1, 0, 1, -26)
-			
+			List.Size = UDim2.new(1, 0, 1, 0)
+
 			local Layout = Instance.new("UIListLayout")
 			Layout.Parent = List
 			Layout.FillDirection = Enum.FillDirection.Vertical
 			Layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 			Layout.SortOrder = Enum.SortOrder.LayoutOrder
-			Layout.Padding = UDim.new(0, 2)
-			
+			Layout.Padding = UDim.new(0, math.floor(6 * scale))
+
 			local items = {}
-			
+
+			local function attachRainbow(textLabel)
+				local g = Instance.new("UIGradient")
+				g.Parent = textLabel
+				g.Color = ColorSequence.new{
+					ColorSequenceKeypoint.new(0.0, Color3.fromRGB(255, 0, 0)),
+					ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 165, 0)),
+					ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 255, 0)),
+					ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 255, 0)),
+					ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0, 170, 255)),
+					ColorSequenceKeypoint.new(1.0, Color3.fromRGB(170, 0, 255)),
+				}
+			end
+
 			local function ensureRow(label)
+				label = tostring(label)
 				if items[label] then
 					return items[label]
 				end
-				local row = Instance.new("TextLabel")
-				row.Name = "Item"
-				row.Parent = List
-				row.BackgroundTransparency = 1
-				row.Size = UDim2.new(1, -10, 0, 16)
-				row.Position = UDim2.new(0, 10, 0, 0)
-				row.Font = Enum.Font.Gotham
-				row.TextSize = 12
-				row.TextXAlignment = Enum.TextXAlignment.Left
-				row.Text = "• " .. tostring(label)
-				addToTheme("Text & Icon", row)
-				items[label] = row
-				return row
+
+				local Row = Instance.new("Frame")
+				Row.Name = "Row"
+				Row.Parent = List
+				Row.BackgroundTransparency = 1
+				Row.BorderSizePixel = 0
+				Row.Size = UDim2.new(1, 0, 0, rowH)
+
+				local Name = Instance.new("TextLabel")
+				Name.Name = "Name"
+				Name.Parent = Row
+				Name.BackgroundTransparency = 1
+				Name.Size = UDim2.new(0.7, 0, 1, 0)
+				Name.Position = UDim2.new(0, 0, 0, 0)
+				Name.Font = Enum.Font.GothamBold
+				Name.TextSize = fontSizeRow
+				Name.TextXAlignment = Enum.TextXAlignment.Left
+				Name.Text = label
+				addToTheme("Text & Icon", Name)
+
+				local State = Instance.new("TextLabel")
+				State.Name = "State"
+				State.Parent = Row
+				State.BackgroundTransparency = 1
+				State.Size = UDim2.new(0.3, 0, 1, 0)
+				State.Position = UDim2.new(0.7, 0, 0, 0)
+				State.Font = Enum.Font.GothamBold
+				State.TextSize = fontSizeRow
+				State.TextXAlignment = Enum.TextXAlignment.Right
+				State.Text = "OFF"
+				addToTheme("Text & Icon", State)
+
+				if (Tabs.CurrentTheme or Theme) == "Dark" then
+					attachRainbow(Name)
+					attachRainbow(State)
+				end
+
+				items[label] = {Row = Row, Name = Name, State = State}
+				return items[label]
 			end
-			
+
+			local function recalcSize(visibleCount)
+				local count = visibleCount or 0
+				if count < 1 then count = 1 end
+				local h = headerH + (padding * 2) + (rowH * count) + (Layout.Padding.Offset * math.max(count - 1, 0))
+				Root.Size = UDim2.new(0, width, 0, h)
+			end
+
 			function overlay:SetState(label, enabled)
-				label = tostring(label)
-				local row = items[label]
-				if enabled then
-					row = ensureRow(label)
-					row.Visible = true
-				else
-					if row then
-						row.Visible = false
-					end
-				end
+				local entry = ensureRow(label)
+				local isOn = enabled and true or false
+				entry.State.Text = isOn and "ON" or "OFF"
 			end
-			
+
 			function overlay:SetStates(map)
-				for label, enabled in pairs(map or {}) do
-					overlay:SetState(label, enabled)
+				local keys = {}
+				for label, _ in pairs(map or {}) do
+					keys[#keys + 1] = tostring(label)
+				end
+				table.sort(keys)
+				for i, label in ipairs(keys) do
+					local entry = ensureRow(label)
+					entry.Row.LayoutOrder = i
+					overlay:SetState(label, map[label])
+				end
+				recalcSize(#keys)
+			end
+
+			function overlay:SetScalePercent(newPercent)
+				if type(newPercent) ~= "number" then
+					return
 				end
 			end
-			
+
 			function overlay:SetVisible(v)
-				Shadow.Visible = v and true or false
+				Root.Visible = v and true or false
 			end
-			
+
 			function overlay:Destroy()
-				Shadow:Destroy()
+				Root:Destroy()
 			end
-			
-			lak(Header, Shadow)
-			
-			overlay.Gui = Shadow
+
+			lak(Header, Root)
+
+			overlay.Gui = Root
 			return overlay
 		end
-		local ThemeDrop = addDropdownSelect(DropdownValue_1, DropdownValue_1, false, CallTheme, Theme, themes.index)
-		
+
 		CallTheme(Theme)
 
 		if DiscordButton and DiscordLink then

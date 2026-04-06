@@ -169,7 +169,8 @@ local DefaultSettings = {
     Modifiers = {},
     ThemeName = "Dark",
     MenuKeybindName = "LeftControl",
-    ShowStatusOverlay = true
+    ShowStatusOverlay = true,
+    OverlayScalePercent = 100
 }
 
 local TimeScaleValues = {0.5, 1, 1.5, 2}
@@ -1002,7 +1003,10 @@ local function SetStatusOverlayEnabled(enabled)
     end
     if enabled then
         local ok, overlay = pcall(function()
-            return Window:CreateStatusOverlay({Title = "Enabled Features"})
+            return Window:CreateStatusOverlay({
+                Title = "Enabled Features",
+                ScalePercent = Globals.OverlayScalePercent or 100
+            })
         end)
         if ok then
             StatusOverlay = overlay
@@ -2009,6 +2013,31 @@ local Settings = Window:Tab({Title = "Settings", Icon = "settings"}) do
             SetSetting("ShowStatusOverlay", v)
             SetStatusOverlayEnabled(v)
             pcall(OverlayUpdate)
+        end
+    })
+
+    Settings:Dropdown({
+        Title = "Overlay Size",
+        Desc = "Scales the status overlay (50% - 300%)",
+        List = {"50%", "100%", "150%", "200%", "250%", "300%"},
+        Value = tostring(Globals.OverlayScalePercent or 100) .. "%",
+        Callback = function(choice)
+            local selected = choice
+            if type(choice) == "table" then
+                selected = choice[1]
+            end
+            selected = tostring(selected or "100%")
+            local num = tonumber((selected:gsub("%%", "")))
+            if not num then
+                num = 100
+            end
+            if num < 50 then num = 50 end
+            if num > 300 then num = 300 end
+            SetSetting("OverlayScalePercent", num)
+            if Globals.ShowStatusOverlay then
+                SetStatusOverlayEnabled(true)
+                pcall(OverlayUpdate)
+            end
         end
     })
 
