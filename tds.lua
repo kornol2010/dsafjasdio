@@ -942,7 +942,7 @@ end
 CurrentEquippedTowers = GetEquippedTowers()
 
 -- // ui
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/DuxiiT/auto-strat/refs/heads/main/Sources/UI.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/kornol2010/dsafjasdio/refs/heads/main/gui.lua"))()
 
 local Window = Library:Window({
     Title = "Panel",
@@ -1867,7 +1867,7 @@ end
 
 Window:Line()
 
-local RecorderInit = loadstring(game:HttpGet("https://raw.githubusercontent.com/DuxiiT/auto-strat/refs/heads/main/Sources/Recorder.lua"))()
+local RecorderInit = loadstring(game:HttpGet("https://raw.githubusercontent.com/kornol2010/dsafjasdio/refs/heads/main/recorder.lua"))()
 RecorderInit({
     Window = Window,
     ReplicatedStorage = ReplicatedStorage,
